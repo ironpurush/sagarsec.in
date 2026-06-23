@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>SAGAR JONDHALE // PENTESTER</title>
+<meta name="description" content="Penetration Testing Consultant. CVE Author. Hall of Fame: NASA, Nokia, Philips, BASF."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#00e5ff;--gd:#00b8d4;--gx:#003d47;--gxx:#001a20;
+  --bg:#080b0f;--s1:#0d1117;--s2:#111620;
+  --border:rgba(255,255,255,.07);--border2:rgba(0,229,255,.28);
+  --txt:#8fa8bf;--txtb:#c8daea;--white:#eef4fb;
+  --red:#ff4560;--ylw:#f0b429;--cyn:#00e5ff;
+  --mono:'JetBrains Mono',monospace;--orb:'Orbitron',monospace;
+}
+html{scroll-behavior:smooth;font-size:14px}
+body{
+  background:var(--bg);color:#a8c0d0;
+  font-family:var(--mono);overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  line-height:1.7;
+}
+
+/* SCANLINES */
+body::after{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.012) 3px,rgba(255,255,255,.012) 4px);
+  pointer-events:none;z-index:9000;
+}
+
+/* ========================
+   BOOTLOADER
+======================== */
+#boot{
+  position:fixed;inset:0;background:#000;
+  z-index:9999;display:flex;flex-direction:column;
+  justify-content:center;padding:clamp(1.5rem,6vw,4rem);
+  font-family:var(--mono);overflow:hidden;
+}
+#boot-header{margin-bottom:2rem}
+#boot-brand{
+  font-family:var(--orb);
+  font-size:clamp(1.1rem,4vw,1.9rem);
+  font-weight:700;color:var(--white);
+  letter-spacing:.08em;
+  position:relative;display:inline-block;
+}
+#boot-brand.gx{animation:brandGlitch 5s step-end infinite}
+@keyframes brandGlitch{
+  0%,85%,100%{transform:none;opacity:1;text-shadow:none}
+  87%{transform:translateX(-4px);opacity:.7;text-shadow:-3px 0 var(--cyn),3px 0 var(--red)}
+  88%{transform:translateX(3px) skewX(-3deg);opacity:.9;text-shadow:2px 0 var(--cyn)}
+  89%{transform:translateX(-2px);opacity:.6;text-shadow:none}
+  90%{transform:none;opacity:1}
+  94%{transform:translateX(2px);opacity:.8;text-shadow:1px 0 var(--red)}
+  95%{transform:none;opacity:1;text-shadow:none}
+}
+#boot-sub{
+  font-size:clamp(9px,2vw,11px);color:var(--txt);
+  letter-spacing:.2em;text-transform:uppercase;
+  margin-top:.4rem;
+}
+#boot.out{animation:bootOut .8s ease forwards}
+@keyframes bootOut{to{opacity:0;visibility:hidden}}
+
+/* Boot glitch effects */
+#boot.glitch-flash{animation:bootFlash .12s step-end}
+@keyframes bootFlash{
+  0%{opacity:1}30%{opacity:.4;transform:translateX(2px)}
+  60%{opacity:.9;transform:translateX(-1px)}100%{opacity:1;transform:none}
+}
+
+
+.boot-log{max-height:45vh;overflow:hidden}
+.boot-line{
+  font-size:clamp(10px,2.5vw,13px);
+  line-height:2;opacity:0;
+  transform:translateX(-6px);
+  transition:opacity .15s,transform .15s;
+  white-space:pre-wrap;word-break:break-word;
+}
+.boot-line.v{opacity:1;transform:translateX(0)}
+.boot-line.ok .pfx{color:var(--g)}
+.boot-line.warn .pfx{color:var(--ylw)}
+.boot-line.err .pfx{color:var(--red)}
+.boot-line.dim{color:rgba(255,255,255,.25)}
+.boot-line .pfx{margin-right:.5rem}
+.boot-line .msg{color:var(--txtb)}
+.boot-line .sub{color:var(--txt);font-size:.85em}
+
+#boot-progress{margin-top:1.5rem;width:min(480px,90vw)}
+.prog-label{
+  display:flex;justify-content:space-between;
+  font-size:11px;color:var(--txt);margin-bottom:.4rem;
+}
+.prog-track{
+  height:2px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);position:relative;
+}
+.prog-fill{height:100%;background:var(--g);width:0%;transition:width .1s linear;box-shadow:0 0 8px rgba(0,229,255,.5)}
+#boot-pct{color:var(--g)}
+#boot-cursor{display:inline-block;width:7px;height:13px;background:var(--g);vertical-align:middle;animation:blink .9s step-end infinite;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+
+/* ========================
+   THREE BG CANVAS
+======================== */
+#bg-canvas{
+  position:fixed;inset:0;width:100%;height:100%;
+  z-index:0;pointer-events:none;opacity:0;
+  transition:opacity 1.4s ease;
+}
+#bg-canvas.on{opacity:1}
+
+/* ========================
+   MAIN WRAP
+======================== */
+#app{
+  position:relative;z-index:1;
+  max-width:960px;margin:0 auto;
+  padding:0 clamp(1rem,4vw,2.5rem);
+  opacity:0;transition:opacity .8s ease .2s;
+}
+#app.on{opacity:1}
+
+/* ========================
+   NAV
+======================== */
+#nav{
+  position:sticky;top:0;z-index:500;
+  background:rgba(0,0,0,.88);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  padding:.7rem 0;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:.8rem;flex-wrap:wrap;
+}
+.nav-id{
+  font-family:var(--mono);font-size:12px;
+  color:var(--txtb);letter-spacing:.04em;
+  display:flex;align-items:center;gap:.5rem;
+}
+.nav-id::before{
+  content:'';display:inline-block;
+  width:6px;height:6px;border-radius:50%;
+  background:var(--g);box-shadow:0 0 6px rgba(0,229,255,.6);
+  animation:pulse 2s ease infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.nav-links{display:flex;gap:1rem;flex-wrap:wrap}
+.nav-links a{
+  font-size:10px;color:rgba(255,255,255,.55);
+  text-decoration:none;letter-spacing:.12em;text-transform:uppercase;
+  transition:color .2s;padding:.2rem 0;
+  border-bottom:1px solid transparent;
+}
+.nav-links a:hover{color:var(--white);border-bottom-color:rgba(255,255,255,.2)}
+
+/* ========================
+   HERO
+======================== */
+#hero{
+  min-height:100svh;display:flex;flex-direction:column;
+  justify-content:center;padding:6rem 0 3rem;
+  position:relative;
+}
+.hero-eyebrow{
+  display:flex;align-items:center;gap:.7rem;
+  font-size:11px;color:#8fa8bf;letter-spacing:.15em;
+  text-transform:uppercase;margin-bottom:1.2rem;
+}
+.hero-eyebrow::before{
+  content:'';flex:0 0 30px;height:1px;background:var(--g);
+  box-shadow:0 0 6px rgba(0,229,255,.4);
+}
+.hero-name{
+  font-family:var(--orb);
+  font-size:clamp(2.2rem,10vw,5.5rem);
+  font-weight:900;line-height:.95;
+  color:var(--white);letter-spacing:-.02em;
+  position:relative;
+}
+.hero-name .line2{
+  color:transparent;
+  -webkit-text-stroke:1px rgba(255,255,255,.18);
+  text-stroke:1px rgba(255,255,255,.18);
+  display:block;
+}
+.glitch{
+  position:relative;display:inline-block;
+}
+.glitch::before,.glitch::after{
+  content:attr(data-text);
+  position:absolute;inset:0;
+  font-family:var(--orb);font-size:inherit;
+  font-weight:900;line-height:inherit;
+}
+.glitch::before{
+  color:var(--cyn);
+  clip-path:polygon(0 0,100% 0,100% 40%,0 40%);
+  animation:glitch1 4s step-end infinite;
+}
+.glitch::after{
+  color:var(--red);
+  clip-path:polygon(0 55%,100% 55%,100% 100%,0 100%);
+  animation:glitch2 4s step-end infinite;
+}
+@keyframes glitch1{
+  0%,90%,100%{transform:translate(0);opacity:0}
+  92%{transform:translate(-3px,1px);opacity:.8}
+  94%{transform:translate(2px,-1px);opacity:.8}
+  96%{transform:translate(0);opacity:0}
+}
+@keyframes glitch2{
+  0%,90%,100%{transform:translate(0);opacity:0}
+  93%{transform:translate(3px,2px);opacity:.8}
+  95%{transform:translate(-2px,0);opacity:.8}
+  97%{transform:translate(0);opacity:0}
+}
+.hero-role{
+  font-size:clamp(.75rem,2.5vw,1rem);
+  color:#c8daea;margin-top:1rem;letter-spacing:.05em;
+  font-weight:300;
+}
+.hero-role span{color:rgba(255,255,255,.35)}
+.hero-bio{
+  margin-top:1.5rem;max-width:540px;
+  font-size:clamp(11.5px,2.5vw,13px);
+  color:#a8c0d0;line-height:1.85;
+  position:relative;padding-left:1rem;
+}
+.hero-bio::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:1px;background:linear-gradient(to bottom,var(--g),transparent);
+}
+
+/* STATS ROW */
+.stats{
+  display:flex;gap:clamp(1rem,4vw,2.5rem);
+  margin-top:2.5rem;flex-wrap:wrap;
+}
+.stat{display:flex;flex-direction:column;gap:.2rem}
+.stat-n{
+  font-family:var(--orb);
+  font-size:clamp(1.5rem,5vw,2.4rem);
+  color:var(--white);line-height:1;font-weight:700;
+}
+.stat-l{font-size:9px;color:#8fa8bf;text-transform:uppercase;letter-spacing:.12em}
+
+/* CTA */
+.ctas{display:flex;gap:.8rem;margin-top:2.5rem;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:.4rem;
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;text-decoration:none;
+  padding:.6rem 1.4rem;cursor:pointer;
+  transition:all .2s;border:none;outline:none;
+}
+.btn-solid{
+  background:var(--g);color:#000;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);
+}
+.btn-solid:hover{background:var(--gd)}
+.btn-ghost{
+  background:transparent;color:#a8c0d0;
+  border:1px solid rgba(255,255,255,.2);
+}
+.btn-ghost:hover{border-color:rgba(255,255,255,.5);color:var(--white)}
+
+/* SCROLL HINT */
+.scroll-hint{
+  position:absolute;bottom:2rem;left:0;
+  display:flex;flex-direction:column;align-items:flex-start;gap:.4rem;
+}
+.scroll-hint span{font-size:10px;color:var(--txt);letter-spacing:.1em}
+.scroll-bar{
+  width:30px;height:2px;background:var(--border);position:relative;overflow:hidden;
+}
+.scroll-bar::after{
+  content:'';position:absolute;left:-100%;top:0;width:100%;height:100%;
+  background:var(--g);animation:scrollAnim 2s ease-in-out infinite;
+}
+@keyframes scrollAnim{0%{left:-100%}100%{left:100%}}
+
+/* ========================
+   SECTION BASE
+======================== */
+.sec{padding:5rem 0;border-top:1px solid var(--border)}
+.sec-head{margin-bottom:3rem}
+.sec-tag{
+  font-size:9px;color:var(--g);letter-spacing:.25em;
+  text-transform:uppercase;margin-bottom:.4rem;
+  display:flex;align-items:center;gap:.5rem;
+}
+.sec-tag::before{content:'▶';font-size:7px;opacity:.6}
+.sec-title{
+  font-family:var(--orb);
+  font-size:clamp(1.2rem,4vw,1.8rem);
+  color:var(--white);font-weight:700;letter-spacing:.02em;
+  line-height:1.1;
+}
+
+/* ========================
+   PROOF CARDS
+======================== */
+.proof-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:1px;background:var(--border);
+  border:1px solid var(--border);
+  margin-bottom:2.5rem;
+}
+.proof-card{
+  background:var(--s1);padding:1.4rem 1.5rem;
+  position:relative;overflow:hidden;
+  transition:background .25s;
+  cursor:default;
+}
+.proof-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;
+  height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);
+  opacity:0;transition:opacity .3s;
+}
+.proof-card:hover{background:#0e141c}
+.proof-card:hover::before{opacity:1}
+.pc-num{
+  font-family:var(--orb);font-size:10px;
+  color:rgba(255,255,255,.2);letter-spacing:.15em;
+  margin-bottom:.6rem;
+}
+.pc-title{
+  font-size:13px;color:var(--white);
+  font-weight:500;margin-bottom:.4rem;line-height:1.3;
+}
+.pc-desc{font-size:11.5px;color:#a8c0d0;line-height:1.65}
+
+/* HOF */
+.hof-wrap{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:1.5rem}
+.hof{
+  font-size:10px;padding:.3rem .75rem;
+  border:1px solid rgba(255,255,255,.18);
+  color:#c8daea;
+  background:rgba(255,255,255,.04);
+  letter-spacing:.06em;
+  clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%);
+}
+
+/* ========================
+   EXPERIENCE
+======================== */
+.timeline{position:relative;padding-left:1.4rem}
+.timeline::before{
+  content:'';position:absolute;left:0;top:.6rem;bottom:0;
+  width:1px;background:linear-gradient(to bottom,rgba(255,255,255,.15),transparent);
+}
+.tl-item{position:relative;margin-bottom:3rem}
+.tl-item::before{
+  content:'';position:absolute;left:-1.55rem;top:.55rem;
+  width:9px;height:9px;background:var(--bg);
+  border:1px solid rgba(255,255,255,.3);
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+}
+.tl-top{
+  display:flex;flex-wrap:wrap;align-items:baseline;
+  gap:.4rem .8rem;margin-bottom:.7rem;
+}
+.tl-role{
+  font-size:clamp(13px,3vw,15px);color:var(--white);
+  font-weight:500;letter-spacing:.02em;
+}
+.tl-co{font-size:12px;color:#8fa8bf}
+.tl-date{
+  font-size:10px;color:#8fa8bf;margin-left:auto;
+  letter-spacing:.06em;
+  border:1px solid rgba(255,255,255,.12);
+  padding:.15rem .5rem;
+}
+.tl-list{list-style:none}
+.tl-list li{
+  font-size:clamp(11px,2.5vw,12.5px);
+  color:#a8c0d0;padding:.25rem 0 .25rem .9rem;
+  position:relative;line-height:1.65;
+}
+.tl-list li::before{content:'›';position:absolute;left:0;color:rgba(255,255,255,.55)}
+
+/* ========================
+   SKILLS + PROGRESS BARS
+======================== */
+.skills-cols{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:2rem;
+}
+.skill-group-title{
+  font-size:10px;color:#c8daea;letter-spacing:.15em;
+  text-transform:uppercase;margin-bottom:1.2rem;
+  padding-bottom:.5rem;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.skill-bar-item{margin-bottom:1rem}
+.skill-bar-top{
+  display:flex;justify-content:space-between;
+  font-size:11.5px;margin-bottom:.35rem;
+}
+.skill-name{color:#c8daea}
+.skill-pct{color:#c8daea;font-size:11px;opacity:.9}
+.skill-track{
+  height:2px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.07);
+  position:relative;overflow:hidden;
+}
+.skill-fill{
+  height:100%;background:linear-gradient(90deg,rgba(255,255,255,.15),var(--g));
+  width:0%;transition:width 1.2s cubic-bezier(.22,1,.36,1);
+  position:relative;
+}
+.skill-fill::after{
+  content:'';position:absolute;right:0;top:0;bottom:0;
+  width:3px;background:var(--g);opacity:.8;box-shadow:0 0 6px var(--g);
+}
+.skill-tag-wrap{display:flex;flex-wrap:wrap;gap:.4rem}
+.skill-tag{
+  font-size:10.5px;padding:.25rem .65rem;
+  border:1px solid rgba(255,255,255,.15);color:#a8c0d0;
+  background:rgba(255,255,255,.03);
+}
+.skill-tag:hover{border-color:rgba(255,255,255,.35);color:var(--white)}
+
+/* ========================
+   CERTIFICATIONS
+======================== */
+.cert-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:1rem;
+}
+.cert-card{
+  background:var(--s1);border:1px solid var(--border);
+  padding:1.2rem;position:relative;overflow:hidden;
+  transition:border-color .25s;
+}
+.cert-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;
+  height:1px;background:var(--g);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .3s ease;
+}
+.cert-card:hover{border-color:rgba(255,255,255,.15)}
+.cert-card:hover::after{transform:scaleX(1)}
+.cert-badge{
+  font-family:var(--orb);font-size:10px;
+  color:var(--g);letter-spacing:.1em;margin-bottom:.5rem;opacity:.7;
+}
+.cert-name{font-size:13px;color:var(--white);line-height:1.4}
+.cert-sub{font-size:11px;color:#8fa8bf;margin-top:.25rem}
+
+/* EDUCATION */
+.edu-item{
+  padding:1rem 1.2rem;background:var(--s1);
+  border:1px solid var(--border);border-left:1px solid rgba(255,255,255,.2);
+  margin-bottom:.8rem;
+}
+.edu-deg{font-size:13px;color:var(--white)}
+.edu-sch{font-size:11.5px;color:#8fa8bf;margin-top:.2rem}
+
+/* ========================
+   CONTACT BLOCKS
+======================== */
+.contact-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:1px;background:var(--border);border:1px solid var(--border);
+}
+.contact-card{
+  display:flex;flex-direction:column;gap:.3rem;
+  background:var(--s1);padding:1.3rem 1.4rem;
+  text-decoration:none;
+  position:relative;overflow:hidden;
+  transition:background .2s;
+}
+.contact-card::before{
+  content:'';position:absolute;top:0;left:0;width:1px;height:0;
+  background:rgba(255,255,255,.3);transition:height .3s ease;
+}
+.contact-card:hover{background:#0e141c}
+.contact-card:hover::before{height:100%}
+.cc-label{
+  font-size:9px;color:#8fa8bf;
+  text-transform:uppercase;letter-spacing:.15em;
+}
+.cc-val{
+  font-size:12.5px;color:var(--white);
+  word-break:break-all;line-height:1.4;
+}
+.cc-arrow{
+  font-size:10px;color:rgba(255,255,255,.45);
+  margin-top:.2rem;
+}
+
+/* ========================
+   FOOTER
+======================== */
+footer{
+  border-top:1px solid var(--border);
+  padding:2.5rem 0 3rem;
+  text-align:center;
+}
+.footer-text{
+  font-size:11px;color:rgba(255,255,255,.4);
+  line-height:2;
+}
+.footer-text .hi{color:var(--txtb)}
+.footer-text .dim{color:rgba(255,255,255,.25);font-size:10px}
+
+/* ========================
+   SCROLL REVEAL
+======================== */
+.r{
+  opacity:0;transform:translateY(20px);
+  transition:opacity .6s ease,transform .6s ease;
+}
+.r.in{opacity:1;transform:none}
+
+/* ========================
+   TERMINAL TICKER (hero decoration)
+======================== */
+.ticker{
+  position:absolute;right:0;top:50%;transform:translateY(-50%);
+  width:clamp(140px,25vw,200px);
+  display:none;
+}
+@media(min-width:700px){.ticker{display:block}}
+.ticker-line{
+  font-size:9px;color:rgba(255,255,255,.12);
+  line-height:1.9;white-space:nowrap;overflow:hidden;
+  letter-spacing:.04em;
+}
+.ticker-line.hi{color:rgba(255,255,255,.3)}
+
+/* ========================
+   MOBILE
+======================== */
+@media(max-width:600px){
+  .tl-date{margin-left:0;width:100%}
+  .sec{padding:3.5rem 0}
+  .hero-name{letter-spacing:-.015em}
+  .skills-cols{gap:1.5rem}
+  .scroll-hint{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .glitch::before,.glitch::after{animation:none;opacity:0}
+  .r{opacity:1;transform:none;transition:none}
+  .skill-fill{transition:none}
+  #boot-cursor{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ========================
+     BOOTLOADER
+======================== -->
+<div id="boot" role="dialog" aria-modal="true" aria-label="System initializing">
+  <div id="boot-header" aria-hidden="true">
+    <div id="boot-brand">SJ // SYSTEM INIT</div>
+    <div id="boot-sub">PENETRATION TESTING OS v2.4.1 — IRONPURUSH</div>
+  </div>
+  <div class="boot-log" id="boot-log"></div>
+  <div id="boot-progress">
+    <div class="prog-label">
+      <span>SYSTEM INIT</span>
+      <span id="boot-pct">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="boot-bar"></div></div>
+    <div style="margin-top:.6rem;font-size:11px;color:rgba(255,255,255,.25)">
+      <span id="boot-status">Booting kernel...</span><span id="boot-cursor"></span>
+    </div>
+  </div>
+</div>
+
+<!-- BG CANVAS -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<!-- ========================
+     APP
+======================== -->
+<div id="app">
+
+  <!-- NAV -->
+  <nav id="nav">
+    <div class="nav-id">sj@0x1337:~$</div>
+    <div class="nav-links">
+      <a href="#proof">Proof</a>
+      <a href="#experience">XP</a>
+      <a href="#skills">Skills</a>
+      <a href="#certs">Certs</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+
+    <!-- Terminal ticker (desktop only) -->
+    <div class="ticker" aria-hidden="true" id="ticker"></div>
+
+    <div class="hero-eyebrow">Penetration Testing Consultant · Mumbai, IN</div>
+
+    <h1 class="hero-name">
+      <span class="glitch" data-text="SAGAR">SAGAR</span><br>
+      <span class="line2">JONDHALE</span>
+    </h1>
+
+    <div class="hero-role">
+      Penetration Tester &nbsp;<span>//</span>&nbsp; CVE Author &nbsp;<span>//</span>&nbsp; Bug Bounty Hunter
+    </div>
+
+    <p class="hero-bio">
+      3+ years breaking production systems across banking and enterprise. Published CVE author.
+      Recognised by NASA, Nokia, Philips &amp; BASF. 60+ apps, 70+ APIs manually assessed.
+      CRTA certified offensive security professional.
+    </p>
+
+    <div class="stats">
+      <div class="stat"><span class="stat-n">60<span style="font-size:.5em;color:var(--txt)">+</span></span><span class="stat-l">Apps Assessed</span></div>
+      <div class="stat"><span class="stat-n">70<span style="font-size:.5em;color:var(--txt)">+</span></span><span class="stat-l">APIs Tested</span></div>
+      <div class="stat"><span class="stat-n">10<span style="font-size:.5em;color:var(--txt)">+</span></span><span class="stat-l">Hall of Fames</span></div>
+      <div class="stat"><span class="stat-n">1</span><span class="stat-l">CVE Published</span></div>
+    </div>
+
+    <div class="ctas">
+      <a href="#contact" class="btn btn-solid">// Contact Me</a>
+      <a href="Sagar_Jondhale_CV_June_2026.pdf" download class="btn btn-ghost">↓ Download Resume</a>
+    </div>
+
+    <div class="scroll-hint" aria-hidden="true">
+      <span>SCROLL</span>
+      <div class="scroll-bar"></div>
+    </div>
+  </section>
+
+  <!-- ========================
+       PROOF POINTS
+  ======================== -->
+  <section class="sec" id="proof">
+    <div class="sec-head r">
+      <div class="sec-tag">Key Proof Points</div>
+      <h2 class="sec-title">Results That Speak</h2>
+    </div>
+
+    <div class="proof-grid r">
+      <div class="proof-card">
+        <div class="pc-num">01 // CVE</div>
+        <div class="pc-title">CVE-2025-53545</div>
+        <div class="pc-desc">Independently discovered and published under own name in the global CVE database.</div>
+      </div>
+      <div class="proof-card">
+        <div class="pc-num">02 // HOF</div>
+        <div class="pc-title">10+ Hall of Fames</div>
+        <div class="pc-desc">NASA · Nokia · Philips · BASF · UK Ministry of Defence and more.</div>
+      </div>
+      <div class="proof-card">
+        <div class="pc-num">03 // GOV</div>
+        <div class="pc-title">Government Attack Surface</div>
+        <div class="pc-desc">Secured 30+ Indian gov websites and the UK Ministry of Defence via VDP programs.</div>
+      </div>
+      <div class="proof-card">
+        <div class="pc-num">04 // API</div>
+        <div class="pc-title">70+ APIs Assessed</div>
+        <div class="pc-desc">Auth, authz, input validation, encryption flaws across banking-grade APIs.</div>
+      </div>
+      <div class="proof-card">
+        <div class="pc-num">05 // PCI</div>
+        <div class="pc-title">Payment Gateway / PCI-DSS</div>
+        <div class="pc-desc">Mobile app financial transaction flows assessed against PCI-DSS-aligned controls.</div>
+      </div>
+      <div class="proof-card">
+        <div class="pc-num">06 // CERT-IN</div>
+        <div class="pc-title">CERT-In Contribution</div>
+        <div class="pc-desc">Manual web app testing contribution to a CERT-In empanelment assessment.</div>
+      </div>
+    </div>
+
+    <div class="r">
+      <div class="sec-tag" style="margin-bottom:.8rem">Hall of Fame</div>
+      <div class="hof-wrap">
+        <span class="hof">NASA</span><span class="hof">Nokia</span>
+        <span class="hof">Philips</span><span class="hof">BASF</span>
+        <span class="hof">UK Ministry of Defence</span><span class="hof">Jio</span>
+        <span class="hof">Mollie</span><span class="hof">LG</span>
+        <span class="hof">TruCSR</span><span class="hof">30+ Indian Gov Sites</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================
+       EXPERIENCE
+  ======================== -->
+  <section class="sec" id="experience">
+    <div class="sec-head r">
+      <div class="sec-tag">Work History</div>
+      <h2 class="sec-title">Experience</h2>
+    </div>
+
+    <div class="timeline">
+
+      <div class="tl-item r">
+        <div class="tl-top">
+          <span class="tl-role">Penetration Testing Consultant</span>
+          <span class="tl-co">Banking Client · Mumbai</span>
+          <span class="tl-date">Jun 2025 — Present</span>
+        </div>
+        <ul class="tl-list">
+          <li>Hands-on SAST/DAST and re-validation across web, mobile, and API attack surfaces for core banking infrastructure.</li>
+          <li>Independently re-exploits previously identified vulnerabilities to verify remediations fully close the attack path — not just automated re-scans.</li>
+          <li>Manual exploitation to separate true positives from false positives, reducing noise for engineering stakeholders.</li>
+          <li>Advises vendors on code-level, server-level, and load balancer remediation to eliminate root-cause vulnerabilities.</li>
+          <li>Owns end-to-end risk exception and risk acceptance tracking across the assessment lifecycle.</li>
+        </ul>
+      </div>
+
+      <div class="tl-item r">
+        <div class="tl-top">
+          <span class="tl-role">Associate Consultant — Penetration Tester</span>
+          <span class="tl-co">Anzen Technologies · Navi Mumbai</span>
+          <span class="tl-date">Feb 2024 — Jun 2025</span>
+        </div>
+        <ul class="tl-list">
+          <li>Payment gateway security assessments on mobile apps — financial transaction flow flaws and PCI-DSS-aligned controls.</li>
+          <li>Manual penetration testing on 60+ web applications using OWASP Top 10 — SQLi, XSS, insecure authentication.</li>
+          <li>API security assessments across 70+ APIs targeting auth, authz, input validation, and encryption.</li>
+          <li>Technical liaison between app owners and offensive security team; verified remediations withstood re-exploitation before sign-off.</li>
+        </ul>
+      </div>
+
+      <div class="tl-item r">
+        <div class="tl-top">
+          <span class="tl-role">Cyber Security Intern</span>
+          <span class="tl-co">Anzen Technologies · Mumbai</span>
+          <span class="tl-date">Jul 2023 — Jan 2024</span>
+        </div>
+        <ul class="tl-list">
+          <li>Identified and exploited SQLi, XSS, and IDOR using manual testing techniques.</li>
+          <li>Built proficiency with Burp Suite, Kali Linux, Frida, and Jadx for Android security testing.</li>
+          <li>Tested OAuth and API authorization logic for sensitive data handling flaws.</li>
+          <li>Contributed to a CERT-In empanelment assessment — manual web app testing and co-authored consolidated findings report.</li>
+        </ul>
+      </div>
+
+      <div class="tl-item r">
+        <div class="tl-top">
+          <span class="tl-role">Bug Bounty Hunter</span>
+          <span class="tl-co">HackerOne · Bugcrowd · VDP · Remote</span>
+          <span class="tl-date">2023 — Present</span>
+        </div>
+        <ul class="tl-list">
+          <li>10+ Hall of Fame recognitions — NASA, Nokia, Philips, BASF for responsibly disclosed vulnerabilities.</li>
+          <li>Discovered and reported CVE-2025-53545, published in the global CVE database under own name.</li>
+          <li>Critical vulnerabilities reported to UK Ministry of Defence and 30+ Indian government websites.</li>
+          <li>Bounties and recognition from Jio, Mollie; appreciation letters from LG and TruCSR.</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================
+       SKILLS + PROGRESS BARS
+  ======================== -->
+  <section class="sec" id="skills">
+    <div class="sec-head r">
+      <div class="sec-tag">Technical Arsenal</div>
+      <h2 class="sec-title">Skills</h2>
+    </div>
+
+    <div class="skills-cols">
+
+      <div class="r">
+        <div class="skill-group-title">Core Offensive Skills</div>
+
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">Web App Penetration Testing</span>
+            <span class="skill-pct">95%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="95"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">API Security Testing</span>
+            <span class="skill-pct">92%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="92"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">Mobile (Android/iOS) VAPT</span>
+            <span class="skill-pct">85%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="85"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">Manual Exploitation</span>
+            <span class="skill-pct">90%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="90"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">Network VAPT</span>
+            <span class="skill-pct">78%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="78"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">Bug Bounty / Vuln Research</span>
+            <span class="skill-pct">88%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="88"></div></div>
+        </div>
+      </div>
+
+      <div class="r">
+        <div class="skill-group-title">Tools</div>
+        <div class="skill-tag-wrap" style="margin-bottom:1.5rem">
+          <span class="skill-tag">Burp Suite</span>
+          <span class="skill-tag">Kali Linux</span>
+          <span class="skill-tag">Frida</span>
+          <span class="skill-tag">Jadx</span>
+          <span class="skill-tag">Nmap</span>
+          <span class="skill-tag">OWASP ZAP</span>
+          <span class="skill-tag">SQLmap</span>
+          <span class="skill-tag">Metasploit</span>
+        </div>
+
+        <div class="skill-group-title">Specializations</div>
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">PCI-DSS / Payment Security</span>
+            <span class="skill-pct">82%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="82"></div></div>
+        </div>
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">Technical Reporting</span>
+            <span class="skill-pct">90%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="90"></div></div>
+        </div>
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">SAST / DAST</span>
+            <span class="skill-pct">85%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="85"></div></div>
+        </div>
+        <div class="skill-bar-item">
+          <div class="skill-bar-top">
+            <span class="skill-name">Responsible Disclosure</span>
+            <span class="skill-pct">98%</span>
+          </div>
+          <div class="skill-track"><div class="skill-fill" data-w="98"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================
+       CERTIFICATIONS + EDUCATION
+  ======================== -->
+  <section class="sec" id="certs">
+    <div class="sec-head r">
+      <div class="sec-tag">Credentials</div>
+      <h2 class="sec-title">Certifications &amp; Education</h2>
+    </div>
+
+    <div class="cert-grid r">
+      <div class="cert-card">
+        <div class="cert-badge">CERT // RED TEAM</div>
+        <div class="cert-name">Certified Red Team Analyst</div>
+        <div class="cert-sub">CRTA — Offensive Security Credential</div>
+      </div>
+      <div class="cert-card">
+        <div class="cert-badge">CERT // API</div>
+        <div class="cert-name">APIsec Certified Practitioner</div>
+        <div class="cert-sub">API Security Specialization</div>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem" class="r">
+      <div class="sec-tag" style="margin-bottom:1rem">Education</div>
+      <div class="edu-item">
+        <div class="edu-deg">B.Sc. Information Technology</div>
+        <div class="edu-sch">Mumbai University</div>
+      </div>
+      <div class="edu-item">
+        <div class="edu-deg">Higher Secondary Certificate</div>
+        <div class="edu-sch">Maharashtra Board</div>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem" class="r">
+      <div class="sec-tag" style="margin-bottom:.8rem">Community</div>
+      <div class="edu-item" style="border-left-color:rgba(255,255,255,.15)">
+        <div class="edu-deg" style="font-size:12.5px;color:#a8c0d0;font-weight:400;line-height:1.7">
+          Led cross-functional security assessment projects at Anzen Technologies with teams of 8+.
+          Active contributor to cybersecurity communities through meetups, conferences, and workshops.
+          Publishes technical write-ups on bug bounty findings on Medium.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================
+       CONTACT
+  ======================== -->
+  <section class="sec" id="contact">
+    <div class="sec-head r">
+      <div class="sec-tag">Get In Touch</div>
+      <h2 class="sec-title">Contact</h2>
+    </div>
+
+    <div class="contact-grid r">
+      <a href="mailto:sagarjondhle@gmail.com" class="contact-card">
+        <span class="cc-label">Email</span>
+        <span class="cc-val">sagarjondhle@gmail.com</span>
+        <span class="cc-arrow">→ Send Mail</span>
+      </a>
+      <a href="tel:+919324597930" class="contact-card">
+        <span class="cc-label">Phone</span>
+        <span class="cc-val">+91 93245 97930</span>
+        <span class="cc-arrow">→ Call</span>
+      </a>
+      <a href="https://linkedin.com/in/sagarjondhale" target="_blank" rel="noopener" class="contact-card">
+        <span class="cc-label">LinkedIn</span>
+        <span class="cc-val">in/sagarjondhale</span>
+        <span class="cc-arrow">→ Connect</span>
+      </a>
+      <a href="https://sagarsec.in" target="_blank" rel="noopener" class="contact-card">
+        <span class="cc-label">Website</span>
+        <span class="cc-val">sagarsec.in</span>
+        <span class="cc-arrow">→ Visit</span>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-text">
+      <div>Designed &amp; Developed by <span class="hi">Sagar Jondhale</span> aka <span class="hi">ironpurush</span></div>
+      <div class="dim">// CVE-2025-53545 · CRTA Certified · 10+ Hall of Fames · 60+ Apps Assessed</div>
+      <div class="dim" style="margin-top:.4rem">[ All vulnerabilities disclosed responsibly. No systems harmed without authorization. ]</div>
+    </div>
+  </footer>
+
+</div><!-- /app -->
+
+<!-- THREE.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+(function(){
+'use strict';
+
+/* ========================
+   BOOT SEQUENCE CONFIG
+   — edit messages here —
+======================== */
+var BOOT_LINES = [
+  {t:'[SYS]  BIOS v2.4.1 · Offensive Security Kernel',          cls:'ok',  ms:0},
+  {t:'[INIT] Loading attack surface scanner.............',       cls:'',    ms:220},
+  {t:'[OK]   OWASP Top 10 engine — armed',                      cls:'ok',  ms:420},
+  {t:'[OK]   Burp Suite bridge — established',                  cls:'ok',  ms:580},
+  {t:'[OK]   Mobile VAPT modules (Frida/Jadx) — ready',        cls:'ok',  ms:730},
+  {t:'[OK]   API assessment framework — online',                cls:'ok',  ms:880},
+  {t:'[OK]   CVE-2025-53545 indexed in global database',        cls:'ok',  ms:1040},
+  {t:'[!!]   Hall of Fame: NASA · Nokia · Philips · BASF...',   cls:'warn',ms:1230},
+  {t:'[!!]   UK MoD + 30 Indian Gov targets secured',           cls:'warn',ms:1380},
+  {t:'[SYS]  Mounting identity: sagar@0x1337 :: ironpurush',   cls:'ok',  ms:1560},
+  {t:'[SYS]  Decrypting portfolio payload...',                  cls:'dim', ms:1750},
+  {t:'[OK]   ACCESS GRANTED — Welcome, operator.',              cls:'ok',  ms:1950},
+];
+var BOOT_STATUSES = [
+  'Loading offensive kernel...',
+  'Initializing VAPT modules...',
+  'Establishing Burp Suite bridge...',
+  'Syncing CVE database...',
+  'Authenticating identity...',
+  'Decrypting portfolio...',
+  'System online.',
+];
+
+/* Boot DOM */
+var bootEl  = document.getElementById('boot');
+var logEl   = document.getElementById('boot-log');
+var barEl   = document.getElementById('boot-bar');
+var pctEl   = document.getElementById('boot-pct');
+var statEl  = document.getElementById('boot-status');
+var appEl    = document.getElementById('app');
+var canvasEl = document.getElementById('bg-canvas');
+var brandEl  = document.getElementById('boot-brand');
+if(brandEl) brandEl.classList.add('gx');
+
+var total = BOOT_LINES.length;
+var statusIdx = 0;
+
+function showLine(i){
+  if(i >= total){
+    barEl.style.width = '100%';
+    pctEl.textContent = '100%';
+    statEl.textContent = BOOT_STATUSES[BOOT_STATUSES.length-1];
+    /* Final glitch burst before launch */
+    bootEl.classList.add('glitch-flash');
+    setTimeout(launch, 600);
+    return;
+  }
+  var cfg = BOOT_LINES[i];
+  var el = document.createElement('div');
+  el.className = 'boot-line' + (cfg.cls ? ' '+cfg.cls : '');
+  var pfxMap = {ok:'[OK]  ',warn:'[!!]  ',err:'[ERR] ',dim:''};
+  el.innerHTML = '<span class="pfx">' + (pfxMap[cfg.cls]||'[SYS] ') + '</span><span class="msg">' + cfg.t.replace(/^\[.*?\]\s*/,'') + '</span>';
+  logEl.appendChild(el);
+  /* Occasional screen micro-flash on warn lines */
+  if(cfg.cls === 'warn'){
+    bootEl.classList.remove('glitch-flash');
+    void bootEl.offsetWidth;
+    bootEl.classList.add('glitch-flash');
+  }
+  requestAnimationFrame(function(){ el.classList.add('v') });
+  logEl.scrollTop = logEl.scrollHeight;
+
+  var pct = Math.round((i+1)/total*100);
+  barEl.style.width = pct+'%';
+  pctEl.textContent = pct+'%';
+
+  if(i % 2 === 0 && statusIdx < BOOT_STATUSES.length-1){
+    statEl.textContent = BOOT_STATUSES[statusIdx++];
+  }
+
+  var next = i+1 < total ? BOOT_LINES[i+1].ms - cfg.ms : 200;
+  setTimeout(function(){ showLine(i+1); }, next);
+}
+
+function launch(){
+  bootEl.classList.add('out');
+  appEl.classList.add('on');
+  canvasEl.classList.add('on');
+  setTimeout(function(){ bootEl.style.display='none'; initReveal(); }, 850);
+}
+
+setTimeout(function(){ showLine(0); }, 350);
+
+/* ========================
+   THREE.JS — TESSERACT + CURSOR BEAMS
+======================== */
+function initThree(){
+  if(typeof THREE === 'undefined') return;
+  var mobile = window.innerWidth < 768;
+
+  var scene = new THREE.Scene();
+  var cam   = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 500);
+  cam.position.set(0, 0, mobile ? 22 : 18);
+
+  var renderer = new THREE.WebGLRenderer({
+    canvas: canvasEl, alpha: true,
+    antialias: !mobile, powerPreference: 'low-power'
+  });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x000000, 0);
+
+  /* ─────────────────────────────────────────
+     TESSERACT (4-D hypercube projected to 3D)
+     Outer cube S=5, inner cube s=2.5
+     16 vertices total, 32 edges
+  ───────────────────────────────────────── */
+  var S  = mobile ? 3.5 : 5;   /* outer cube half-size */
+  var s  = mobile ? 1.6 : 2.4; /* inner cube half-size */
+
+  /* Generate all 16 4D vertices: (±1,±1,±1,±1) */
+  var verts4D = [];
+  for(var b = 0; b < 16; b++){
+    verts4D.push([
+      (b&1 ? 1 : -1),
+      (b&2 ? 1 : -1),
+      (b&4 ? 1 : -1),
+      (b&8 ? 1 : -1)
+    ]);
+  }
+
+  /* 4D→3D projection: w-axis perspective */
+  function project4D(v4, angleXW, angleYW, angleZW){
+    /* rotate in XW plane */
+    var cx = Math.cos(angleXW), sx = Math.sin(angleXW);
+    var x1 = v4[0]*cx - v4[3]*sx;
+    var w1 = v4[0]*sx + v4[3]*cx;
+    /* rotate in YW plane */
+    var cy = Math.cos(angleYW), sy = Math.sin(angleYW);
+    var y1 = v4[1]*cy - w1*sy;
+    var w2 = v4[1]*sy + w1*cy;
+    /* rotate in ZW plane */
+    var cz = Math.cos(angleZW), sz = Math.sin(angleZW);
+    var z1 = v4[2]*cz - w2*sz;
+    var w3 = v4[2]*sz + w2*cz;
+    /* perspective divide on w */
+    var wDist = 2.5;
+    var pd    = wDist / (wDist - w3);
+    return new THREE.Vector3(x1*pd*S, y1*pd*S, z1*pd*S);
+  }
+
+  /* Build edges — two 4D vertices share an edge if they differ in exactly 1 bit */
+  var edges = [];
+  for(var a2 = 0; a2 < 16; a2++){
+    for(var b2 = a2+1; b2 < 16; b2++){
+      var diff = 0, xor = a2^b2;
+      while(xor){ diff += xor&1; xor>>=1; }
+      if(diff === 1) edges.push([a2, b2]);
+    }
+  }/* 32 edges */
+
+  /* Materials */
+  var outerMat = new THREE.LineBasicMaterial({
+    color: 0x00e5ff, transparent: true, opacity: 0.7
+  });
+  var innerMat = new THREE.LineBasicMaterial({
+    color: 0x00b8d4, transparent: true, opacity: 0.35
+  });
+  var connMat  = new THREE.LineBasicMaterial({
+    color: 0x004a5e, transparent: true, opacity: 0.22
+  });
+
+  /* Create a line object per edge (so we can update positions each frame) */
+  var edgeLines = edges.map(function(e){
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    /* Classify edge: outer (w bits same both 0 or both 1) vs inner/connector */
+    var aW = (e[0]&8) ? 1 : -1;
+    var bW = (e[1]&8) ? 1 : -1;
+    var mat = (aW === bW) ? (aW===1 ? innerMat : outerMat) : connMat;
+    var line = new THREE.Line(geo, mat);
+    scene.add(line);
+    return {line: line, a: e[0], b: e[1]};
+  });
+
+  /* Node sprites at each vertex */
+  var nodePositions = new Float32Array(16*3);
+  var nodeGeo = new THREE.BufferGeometry();
+  nodeGeo.setAttribute('position', new THREE.BufferAttribute(nodePositions, 3));
+  var nodeMat = new THREE.PointsMaterial({
+    color: 0x00e5ff, size: mobile ? 0.18 : 0.26,
+    transparent: true, opacity: 1.0, sizeAttenuation: true
+  });
+  scene.add(new THREE.Points(nodeGeo, nodeMat));
+
+  /* Tesseract group wrapper for 3D rotation from cursor */
+  var tGroup = new THREE.Group();
+  /* Move it slightly right on desktop so it doesn't sit behind hero text */
+  tGroup.position.x = mobile ? 0 : 3.5;
+  scene.add(tGroup);
+  /* Re-parent everything into tGroup */
+  edgeLines.forEach(function(el){ tGroup.add(el.line); scene.remove(el.line); });
+  tGroup.add(scene.children[scene.children.length-1]); /* nodes */
+  scene.remove(scene.children[scene.children.length-1]);
+  tGroup.add(nodeGeo._pts = new THREE.Points(nodeGeo, nodeMat));
+  /* Fix: add nodes properly */
+  var nodePts = new THREE.Points(nodeGeo, nodeMat);
+  tGroup.add(nodePts);
+
+  /* ─────────────────────────────────────────
+     CURSOR BEAMS
+     8 beams radiate from tesseract centre
+     toward a 3D cursor target point
+  ───────────────────────────────────────── */
+  var BEAM_COUNT = mobile ? 5 : 8;
+  var beamMats   = [];
+  var beamGeos   = [];
+  var beamObjs   = [];
+
+  for(var bi = 0; bi < BEAM_COUNT; bi++){
+    var bGeo = new THREE.BufferGeometry();
+    bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    var bMat = new THREE.LineBasicMaterial({
+      color: 0x00e5ff, transparent: true,
+      opacity: 0.0 /* starts invisible, fades in on move */
+    });
+    var bLine = new THREE.Line(bGeo, bMat);
+    scene.add(bLine);
+    beamGeos.push(bGeo);
+    beamMats.push(bMat);
+    beamObjs.push(bLine);
+  }
+
+  /* Beam spread origins — offset around centre */
+  var beamOffsets = [];
+  for(var bi2 = 0; bi2 < BEAM_COUNT; bi2++){
+    var ang = (bi2 / BEAM_COUNT) * Math.PI * 2;
+    var r3  = mobile ? 0.6 : 1.0;
+    beamOffsets.push(new THREE.Vector3(
+      Math.cos(ang) * r3,
+      Math.sin(ang) * r3,
+      0
+    ));
+  }
+
+  /* ─────────────────────────────────────────
+     SQUARE DOT FIELD — multiple layers
+     Three.js PointsMaterial uses gl.POINTS
+     which render as squares by default when
+     map is null and alphaTest is off.
+  ───────────────────────────────────────── */
+
+  /* Helper: build a random spread of points */
+  function makeParticleLayer(count, spread, zMin, zMax, color, size, opacity){
+    var arr = new Float32Array(count * 3);
+    for(var i = 0; i < count; i++){
+      arr[i*3]   = (Math.random() - 0.5) * spread;
+      arr[i*3+1] = (Math.random() - 0.5) * spread * 0.65;
+      arr[i*3+2] = zMin + Math.random() * (zMax - zMin);
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    var mat = new THREE.PointsMaterial({
+      color: color, size: size,
+      transparent: true, opacity: opacity,
+      sizeAttenuation: true
+    });
+    var pts = new THREE.Points(geo, mat);
+    scene.add(pts);
+    return { pts: pts, mat: mat, arr: arr, count: count, geo: geo };
+  }
+
+  var layers = [];
+
+  /* Layer 1 — tiny far-back dim dots, very dense */
+  layers.push(makeParticleLayer(
+    mobile ? 120 : 280,   /* count  */
+    55, -18, -8,           /* spread, zMin, zMax */
+    0x0d2233,              /* colour: very dark teal */
+    mobile ? 0.07 : 0.10, /* size   */
+    0.75                   /* opacity */
+  ));
+
+  /* Layer 2 — medium mid-range bright cyan dots */
+  layers.push(makeParticleLayer(
+    mobile ? 60 : 140,
+    46, -10, -2,
+    0x006080,
+    mobile ? 0.10 : 0.15,
+    0.65
+  ));
+
+  /* Layer 3 — close bright accent dots, sparse */
+  layers.push(makeParticleLayer(
+    mobile ? 25 : 55,
+    38, -4, 4,
+    0x00c8e8,
+    mobile ? 0.13 : 0.20,
+    0.55
+  ));
+
+  /* Layer 4 — very close tiny bright specks that react to cursor */
+  var reactLayer = makeParticleLayer(
+    mobile ? 18 : 40,
+    32, 0, 6,
+    0x00e5ff,
+    mobile ? 0.16 : 0.28,
+    0.40
+  );
+  layers.push(reactLayer);
+
+  /* Layer 5 — scattered large square dots, very sparse, barely visible */
+  layers.push(makeParticleLayer(
+    mobile ? 8 : 18,
+    50, -14, -6,
+    0x003a52,
+    mobile ? 0.22 : 0.38,
+    0.35
+  ));
+
+  /* Drift velocities per layer */
+  var layerDrift = [
+    { x:  0.0008, y:  0.0004 },  /* layer 1 */
+    { x: -0.0012, y:  0.0006 },  /* layer 2 */
+    { x:  0.0006, y: -0.0010 },  /* layer 3 */
+    { x: -0.0005, y:  0.0008 },  /* layer 4 */
+    { x:  0.0003, y: -0.0005 },  /* layer 5 */
+  ];
+
+  /* ─────────────────────────────────────────
+     MOUSE / TOUCH INPUT
+  ───────────────────────────────────────── */
+  var rawMX = 0, rawMY = 0;   /* normalised -1..1 */
+  var smMX  = 0, smMY  = 0;   /* smoothed */
+  var beamOpacity = 0;         /* current beam opacity */
+  var beamTarget  = new THREE.Vector3(0, 0, 0);
+  var lastMove    = 0;
+
+  function onPointer(px, py){
+    rawMX = (px / innerWidth  - 0.5) * 2;
+    rawMY = -(py / innerHeight - 0.5) * 2;
+    lastMove = Date.now();
+  }
+  window.addEventListener('mousemove', function(e){ onPointer(e.clientX, e.clientY); });
+  window.addEventListener('touchmove',  function(e){
+    if(e.touches[0]) onPointer(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:true});
+
+  /* ─────────────────────────────────────────
+     MAIN LOOP
+  ───────────────────────────────────────── */
+  var raf, t = 0;
+
+  function tick(){
+    raf = requestAnimationFrame(tick);
+    t  += 0.006;
+
+    /* ── Smooth mouse ── */
+    smMX += (rawMX - smMX) * 0.06;
+    smMY += (rawMY - smMY) * 0.06;
+
+    /* ── Tesseract 4D rotation angles (auto + mouse influence) ── */
+    var angleXW = t * 0.45 + smMX * 0.8;
+    var angleYW = t * 0.32 + smMY * 0.6;
+    var angleZW = t * 0.21;
+
+    /* ── Project all 16 verts ── */
+    var projected = verts4D.map(function(v){ return project4D(v, angleXW, angleYW, angleZW); });
+
+    /* ── Update edge line positions ── */
+    edgeLines.forEach(function(el){
+      var pA = projected[el.a], pB = projected[el.b];
+      var arr = el.line.geometry.attributes.position.array;
+      arr[0]=pA.x; arr[1]=pA.y; arr[2]=pA.z;
+      arr[3]=pB.x; arr[4]=pB.y; arr[5]=pB.z;
+      el.line.geometry.attributes.position.needsUpdate = true;
+    });
+
+    /* ── Update node positions ── */
+    for(var ni = 0; ni < 16; ni++){
+      var np = projected[ni];
+      nodePositions[ni*3]   = np.x;
+      nodePositions[ni*3+1] = np.y;
+      nodePositions[ni*3+2] = np.z;
+    }
+    nodeGeo.attributes.position.needsUpdate = true;
+
+    /* ── Square dot layers — drift + cursor parallax ── */
+    for(var li = 0; li < layers.length; li++){
+      var L   = layers[li];
+      var drft = layerDrift[li];
+      var parallaxStr = (li / layers.length) * 0.5; /* closer layers move more */
+
+      /* Rotate the whole point cloud slowly */
+      L.pts.position.x += drft.x + smMX * parallaxStr * 0.012;
+      L.pts.position.y += drft.y + smMY * parallaxStr * 0.008;
+
+      /* Wrap position so it never drifts too far */
+      if(L.pts.position.x >  4) L.pts.position.x = -4;
+      if(L.pts.position.x < -4) L.pts.position.x =  4;
+      if(L.pts.position.y >  3) L.pts.position.y = -3;
+      if(L.pts.position.y < -3) L.pts.position.y =  3;
+
+      /* Pulse opacity on the brighter layers */
+      if(li >= 2){
+        L.mat.opacity = (li === 3 ? 0.40 : 0.55) + Math.sin(t * 1.2 + li * 1.1) * 0.12;
+      }
+    }
+
+    /* ── 3D cursor rotation for tGroup (extra parallax layer) ── */
+    tGroup.rotation.x += (smMY * 0.3 - tGroup.rotation.x) * 0.04;
+    tGroup.rotation.y += (smMX * 0.4 - tGroup.rotation.y) * 0.04;
+
+    /* ── Node pulse ── */
+    nodeMat.opacity = 0.75 + Math.sin(t * 3.0) * 0.25;
+
+    /* ── Outer edge pulse ── */
+    outerMat.opacity = 0.55 + Math.sin(t * 1.8) * 0.15;
+
+    /* ── Beam logic ── */
+    var timeSince = Date.now() - lastMove;
+    var targetOp  = timeSince < 2500 ? 0.55 : 0.0;
+    beamOpacity  += (targetOp - beamOpacity) * 0.05;
+
+    /* World position of beam target: map cursor to 3D plane in front of cam */
+    beamTarget.set(smMX * 12, smMY * 8, 2);
+
+    /* Centre of tesseract in world space */
+    var centre = tGroup.position.clone();
+
+    for(var bi3 = 0; bi3 < BEAM_COUNT; bi3++){
+      var origin = centre.clone().add(beamOffsets[bi3]);
+      var dir    = beamTarget.clone().sub(origin);
+      var len    = dir.length();
+      /* Beam tip: extend beyond cursor for cool overshoot */
+      var tip = origin.clone().add(dir.normalize().multiplyScalar(len * 1.25));
+
+      var bArr = beamGeos[bi3].attributes.position.array;
+      bArr[0]=origin.x; bArr[1]=origin.y; bArr[2]=origin.z;
+      bArr[3]=tip.x;    bArr[4]=tip.y;    bArr[5]=tip.z;
+      beamGeos[bi3].attributes.position.needsUpdate = true;
+
+      /* Stagger opacity per beam for ripple feel */
+      var phase = Math.sin(t * 4.0 + bi3 * 0.7) * 0.2;
+      beamMats[bi3].opacity = Math.max(0, beamOpacity + phase);
+    }
+
+    renderer.render(scene, cam);
+  }
+  tick();
+
+  window.addEventListener('resize', function(){
+    cam.aspect = innerWidth/innerHeight;
+    cam.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) cancelAnimationFrame(raf);
+    else tick();
+  });
+}
+initThree();
+
+/* ========================
+   TICKER (hero decoration)
+======================== */
+function initTicker(){
+  var el = document.getElementById('ticker');
+  if(!el) return;
+  var msgs = [
+    'CVE-2025-53545 ............',
+    'OWASP Top 10 ✓ ..............',
+    'SQLi · XSS · IDOR .........',
+    'Burp Suite active ..........',
+    'Android VAPT ready .........',
+    'NASA HOF 2024 ..............',
+    'Nokia HOF ..................',
+    'Philips HOF ................',
+    'BASF HOF ...................',
+    'UK MoD secured .............',
+    '30+ Gov sites patched ......',
+    'PCI-DSS aligned ............',
+    'CRTA Certified .............',
+    'APIsec Practitioner ........',
+    'CERT-In contributor ........',
+    'ironpurush .................',
+  ];
+  var html='';
+  for(var i=0;i<msgs.length;i++){
+    html+='<div class="ticker-line'+(i%3===0?' hi':'')+'">'+msgs[i]+'</div>';
+  }
+  el.innerHTML=html;
+}
+initTicker();
+
+/* ========================
+   SCROLL REVEAL
+======================== */
+function initReveal(){
+  var els = document.querySelectorAll('.r');
+  if(!('IntersectionObserver' in window)){
+    els.forEach(function(e){e.classList.add('in')});
+    return;
+  }
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        entry.target.classList.add('in');
+        obs.unobserve(entry.target);
+      }
+    });
+  },{threshold:.07,rootMargin:'0px 0px -30px 0px'});
+  els.forEach(function(e){obs.observe(e)});
+}
+
+/* ========================
+   SKILL BAR ANIMATION
+======================== */
+function initSkillBars(){
+  var bars = document.querySelectorAll('.skill-fill');
+  if(!bars.length) return;
+  if(!('IntersectionObserver' in window)){
+    bars.forEach(function(b){b.style.width=b.dataset.w+'%'});
+    return;
+  }
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.style.width = e.target.dataset.w+'%';
+        obs.unobserve(e.target);
+      }
+    });
+  },{threshold:.3});
+  bars.forEach(function(b){obs.observe(b)});
+}
+
+/* Run skill bars after boot */
+var _origReveal = initReveal;
+initReveal = function(){
+  _origReveal();
+  setTimeout(initSkillBars, 400);
+};
+
+})();
+</script>
+</body>
+</html>
